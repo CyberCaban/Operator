@@ -6,6 +6,7 @@ function App() {
   const [points, setPoints] = useState<number[][]>();
   const [operator, setOperator] = useState<number[][]>();
   const [matSize, setMatsize] = useState(3);
+  const [scale, setScale] = useState(1);
 
   useEffect(() => {
     const numbers = trPath.match(/^\d+|\d+\b|\d+(?=\w)/g)?.map((v) => +v) ?? [];
@@ -14,14 +15,14 @@ function App() {
 
   useEffect(() => {
     console.log(multiplyMatrices(points || [[1]], operator || [[1]]));
-    let vectors = toSVGVector(
+    const vectors = toSVGVector(
       multiplyMatrices(points || [[1]], operator || [[1]])
     );
     if (vectors) {
       setPath(vectors);
     }
     console.log(vectors);
-  }, [points, operator]);
+  }, [points, operator, scale, toSVGVector]);
 
   function parseMatrix(arr: number[], matSize: number) {
     const res = Array.from(Array(matSize), () => new Array(matSize));
@@ -35,12 +36,12 @@ function App() {
     return res;
   }
 
-  function handleOperator(e: React.FormEvent<HTMLFormElement>) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function handleOperator(e: any) {
     e.preventDefault();
     const nums = [];
     for (let i = 0; i < matSize ** 2; i++) {
-      // @ts-expect-error cannot define type
-      const el = e.target[i].value;
+      const el = e.target.form[i].value;
       nums.push(eval(el));
     }
     setOperator(parseMatrix(nums, matSize));
@@ -75,9 +76,11 @@ function App() {
       console.log("error", numbers);
       return;
     }
-    const res = `M ${numbers[0][0] * 5} ${numbers[0][1] * 5} L ${
-      numbers[1][0] * 5
-    } ${numbers[1][1] * 5} L ${numbers[2][0] * 5} ${numbers[2][1] * 5}`;
+    const res = `M ${numbers[0][0] * scale} ${numbers[0][1] * scale} L ${
+      numbers[1][0] * scale
+    } ${numbers[1][1] * scale} L ${numbers[2][0] * scale} ${
+      numbers[2][1] * scale
+    }`;
     return res;
   }
 
@@ -104,6 +107,7 @@ function App() {
           <path d={path} stroke="red" strokeWidth={2} scale={10} />
         </svg>
       </div>
+      <label htmlFor="mat_size">Size</label>
       <input
         type="number"
         name="mat_size"
@@ -115,12 +119,14 @@ function App() {
         onChange={(e) => setMatsize(+e.target.value)}
         className="m-2 text-center "
       />
-      <section>
-        <h2>Operator</h2>
-        <form action="" onSubmit={(e) => handleOperator(e)}>
-          {matSize >= 3
-            ? Array.from(Array(matSize), () => new Array(matSize).fill(0))?.map(
-                (row, index) => (
+      <section className="flex flex-row">
+        <section>
+          <h2>Operator</h2>
+          <form action="" onChange={(e) => handleOperator(e)}>
+            {matSize >= 3 && matSize <= 9
+              ? Array.from(Array(matSize), () =>
+                  new Array(matSize).fill(0)
+                )?.map((row, index) => (
                   <tr key={index}>
                     {row.map((col, colIndex) => (
                       <input
@@ -133,11 +139,23 @@ function App() {
                       />
                     ))}
                   </tr>
-                )
-              )
-            : null}
-          <button type="submit">Submit</button>
-        </form>
+                ))
+              : null}
+          </form>
+        </section>
+        <section className="flex flex-col">
+          <label htmlFor="scale">Scale</label>
+          <input
+            type="number"
+            name="scale"
+            id="scale"
+            min={0}
+            security="number"
+            value={scale}
+            onChange={(e) => setScale(+e.target.value)}
+            className="m-2 text-center rounded-md w-16"
+          />
+        </section>
       </section>
     </main>
   );
