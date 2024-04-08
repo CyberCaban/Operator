@@ -1,9 +1,15 @@
 import { useEffect, useState } from "react";
 
+type PathD = {
+  key: string;
+  coords: [x: number, y: number, z: number];
+};
+
 function App() {
   const [trPath, setTrPath] = useState("");
   const [path, setPath] = useState("");
   const [points, setPoints] = useState<number[][]>();
+  const [newPoints, setNewPoints] = useState<PathD[]>();
   const [operator, setOperator] = useState<number[][]>();
   const [res, setRes] = useState<number[][]>();
   const [matSize, setMatsize] = useState(3);
@@ -11,6 +17,19 @@ function App() {
 
   useEffect(() => {
     const numbers = trPath.match(/^\d+|\d+\b|\d+(?=\w)/g)?.map((v) => +v) ?? [];
+    const nums = trPath.match(/[M,L]\s+\d+\s+\d+\s+\d+/g);
+    const p: PathD[] = [];
+
+    nums?.map((v) => {
+      const i = v.split(/\s+/);
+      const item: PathD = {
+        key: i[0],
+        coords: [+i[1], +i[2], +i[3]],
+      };
+      p.push(item);
+    });
+    setNewPoints(p);
+
     setPoints(parseMatrix(numbers, matSize));
   }, [matSize, trPath]);
 
@@ -33,8 +52,15 @@ function App() {
     if (vectors) {
       setPath(vectors);
     }
-    console.log(vectors);
-  }, [points, operator, scale]);
+    // console.log(vectors);
+
+    // const npfirst = newPoints[0].coords
+    // const mp = multiplyMatrices(
+    //   operator || [[1]],
+    //   [npfirst[0], npfirst[1], npfirst[2]] || [[1]]
+    // );
+    // console.log(mp);
+  }, [points, operator, scale, newPoints]);
 
   function parseMatrix(arr: number[], matSize: number) {
     const res = Array.from(Array(matSize), () => new Array(matSize));
@@ -199,4 +225,3 @@ function App() {
 }
 
 export default App;
-
