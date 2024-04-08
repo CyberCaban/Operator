@@ -69,7 +69,10 @@ function App() {
         );
         const test: PathD = {
           act: el.act,
-          coords: newVector && newVector[0] ? newVector[0] : [0, 0, 0],
+          coords:
+            newVector && newVector[0]
+              ? (newVector[0] as [number, number, number])
+              : [0, 0, 0],
         };
         result.push(test);
         // console.log(operator, sc, test);
