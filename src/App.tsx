@@ -1,29 +1,46 @@
 import { useEffect, useState } from "react";
+import {
+  parseMatrix,
+  transposeMatrix,
+  multiplyMatrices,
+} from "./utils/matrices";
 
 type PathD = {
-  key: string;
-  coords: [x: number, y: number, z: number];
+  act: string;
+  coords: [number, number, number];
 };
 
 function App() {
   const [trPath, setTrPath] = useState("");
-  const [path, setPath] = useState("");
   const [points, setPoints] = useState<number[][]>();
-  const [newPoints, setNewPoints] = useState<PathD[]>();
   const [operator, setOperator] = useState<number[][]>();
-  const [res, setRes] = useState<number[][]>();
+  const [_, setDebug] = useState<number[][]>();
   const [matSize, setMatsize] = useState(3);
   const [scale, setScale] = useState(1);
 
+  const [newPoints, setNewPoints] = useState<PathD[]>();
+  const [newRes, setNewRes] = useState<PathD[]>();
+  const [newPath, setNewPath] = useState<string>("");
+
+  useEffect(() => {
+    if (operator === undefined) {
+      setOperator([
+        [1, 0, 0],
+        [0, 1, 0],
+        [0, 0, 1],
+      ]);
+    }
+  }, [operator, trPath]);
+
   useEffect(() => {
     const numbers = trPath.match(/^\d+|\d+\b|\d+(?=\w)/g)?.map((v) => +v) ?? [];
-    const nums = trPath.match(/[M,L]\s+\d+\s+\d+\s+\d+/g);
+    const nums = trPath.match(/[M,L]\s+-?\d+\s+-?\d+\s+-?\d+/g);
     const p: PathD[] = [];
 
     nums?.map((v) => {
       const i = v.split(/\s+/);
       const item: PathD = {
-        key: i[0],
+        act: i[0],
         coords: [+i[1], +i[2], +i[3]],
       };
       p.push(item);
@@ -34,45 +51,43 @@ function App() {
   }, [matSize, trPath]);
 
   useEffect(() => {
-    function toSVGVector(numbers: number[][] | undefined) {
-      if (!numbers || numbers.length < 3 || numbers[0].length < 3) {
-        console.log("error", numbers);
-        return;
-      }
-      const res = `
-      M ${numbers[2][0] * scale} ${numbers[2][1] * scale} 
-      L ${numbers[1][0] * scale} ${numbers[1][1] * scale} 
-      L ${numbers[0][0] * scale} ${numbers[0][1] * scale}`;
-      return res;
-    }
-
     const multiplied = multiplyMatrices(points || [[1]], operator || [[1]]);
-    setRes(multiplied);
-    const vectors = toSVGVector(multiplied);
-    if (vectors) {
-      setPath(vectors);
-    }
-    // console.log(vectors);
+    setDebug(multiplied);
 
-    // const npfirst = newPoints[0].coords
-    // const mp = multiplyMatrices(
-    //   operator || [[1]],
-    //   [npfirst[0], npfirst[1], npfirst[2]] || [[1]]
-    // );
-    // console.log(mp);
+    console.log("logging");
+
+    if (newPoints) {
+      const result = [];
+      for (let i = 0; i < newPoints.length; i++) {
+        const el = newPoints[i];
+        const vector = newPoints
+          ? [[el.coords[0]], [el.coords[1]], [el.coords[2]]]
+          : null;
+
+        const newVector = transposeMatrix(
+          multiplyMatrices(operator || [[1]], vector || [[1]]) || [[1]]
+        );
+        const test: PathD = {
+          act: el.act,
+          coords: newVector && newVector[0] ? newVector[0] : [0, 0, 0],
+        };
+        result.push(test);
+        // console.log(operator, sc, test);
+      }
+      setNewRes(result);
+    }
   }, [points, operator, scale, newPoints]);
 
-  function parseMatrix(arr: number[], matSize: number) {
-    const res = Array.from(Array(matSize), () => new Array(matSize));
-    let index = 0;
-    for (let i = 0; i < arr.length; i++) {
-      if (i % matSize === 0 && i !== 0) index++;
-      if (index > matSize - 1) break;
+  useEffect(() => {
+    let str = "";
+    newRes?.map(({ act, coords }) => {
+      console.log(act, coords);
 
-      res[index][i % matSize] = arr[i];
-    }
-    return res;
-  }
+      str += `${act} ${coords[0] * scale} ${coords[1] * scale} `;
+    });
+
+    setNewPath(str);
+  }, [newRes]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function handleOperator(e: any) {
@@ -85,62 +100,43 @@ function App() {
     setOperator(parseMatrix(nums, matSize));
   }
 
-  function multiplyMatrices(points: number[][], lin_op: number[][]) {
-    if (
-      !points ||
-      !lin_op ||
-      points[0].length !== lin_op.length ||
-      !points.every((item) => item.every((it) => it === it)) ||
-      !lin_op.every((item) => item.every((it) => it === it))
-    ) {
-      console.log("error", points, lin_op);
-      return;
-    }
-
-    const result = Array.from(
-      Array(points.length),
-      () => new Array(lin_op[0].length)
-    );
-    for (let i = 0; i < points.length; i++) {
-      for (let j = 0; j < lin_op[0].length; j++) {
-        result[i][j] = 0;
-        for (let k = 0; k < points[0].length; k++) {
-          if (j === 3) {
-            result[j][i] += lin_op[k][j];
-          }
-          result[i][j] += points[i][k] * lin_op[k][j];
-        }
-      }
-    }
-    return result;
-  }
-
   return (
     <main className="flex flex-col h-full items-center">
       <section className="flex flex-col w-1/3 p-2">
         <p className="text-3xl text-center">Linear Operator</p>
-        <div className="flex flex-row items-center">
+        <div className="flex flex-row items-center justify-center">
           <button
             onClick={() => {
-              setTrPath("M 10 13 1 L 12 10 13 L 10 11 15");
+              setTrPath("M 10 13 1 L 12 10 13 L 10 11 15 L 10 13 1");
               setMatsize(3);
-            }} // make M 10 13 1 L 12 10 13 L 10 11 15
+            }}
             className="m-2 text-xl"
           >
-            init values 3x
+            simple values
           </button>
           <button
             onClick={() => {
-              setTrPath("M 10 13 1 0 L 12 10 13 0 L 10 11 15 0 L 0 0 0 1");
-              setMatsize(4);
-            }} // make M 10 13 1 L 12 10 13 L 10 11 15
+              setTrPath(
+                "M 10 13 1 L 12 10 13 L 10 11 15 L 10 13 1 \nM 10 8 6 L 3 6 5 L 3 10 15 L 10 8 6"
+              );
+            }}
             className="m-2 text-xl"
           >
-            init values 4x
+            complex values
+          </button>
+          <button
+            onClick={() => {
+              setTrPath(
+                "M 3 5 7 L 2 5 7 L 1 9 4 L 6 7 4 L 9 11 7 L 3 5 7 M 0 0 0 L 3 4 1 L 2 7 1 L 0 0 0"
+              );
+            }}
+            className="m-2 text-xl"
+          >
+            more complex values
           </button>
         </div>
-        <input
-          type="text"
+        <textarea
+          // type="string"
           name="operator"
           id="operator_input"
           value={trPath}
@@ -153,24 +149,16 @@ function App() {
           className="w-full h-full transition"
         >
           <path
-            d={path}
-            stroke="red"
+            d={newPath}
+            stroke="rgb(23, 200, 64)" // rgb(23, 200, 64)
             strokeWidth={2}
             scale={10}
             style={{ transform: `translate(50%, 50%)` }}
           />
-          {/* <rect
-            width={50}
-            height={50}
-            fill="white"
-            transform={`matrix(${res[0][0] * scale} ${res[0][1] * scale} ${
-              res[0][2] * scale
-            } ${res[1][0] * scale} ${res[1][1] * scale} ${res[1][1] * scale})`}
-          /> */}
         </svg>
       </div>
       <label htmlFor="mat_size">Size</label>
-      <input
+      {/* <input
         type="number"
         name="mat_size"
         id="mat_size"
@@ -180,7 +168,7 @@ function App() {
         value={matSize}
         onChange={(e) => setMatsize(+e.target.value)}
         className="m-2 text-center "
-      />
+      /> */}
       <section className="flex flex-row">
         <section>
           <h2>Operator</h2>
@@ -212,7 +200,7 @@ function App() {
             name="scale"
             id="scale"
             min={0}
-            step={0.1}
+            // step={0.1}
             security="number"
             value={scale}
             onChange={(e) => setScale(+e.target.value)}
