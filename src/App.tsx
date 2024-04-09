@@ -4,6 +4,7 @@ import {
   transposeMatrix,
   multiplyMatrices,
 } from "./utils/matrices";
+import UploadFile from "./components/UploadFile";
 
 type PathD = {
   act: string;
@@ -12,9 +13,7 @@ type PathD = {
 
 function App() {
   const [trPath, setTrPath] = useState("");
-  const [points, setPoints] = useState<number[][]>();
   const [operator, setOperator] = useState<number[][]>();
-  const [_, setDebug] = useState<number[][]>();
   const [matSize, setMatsize] = useState(3);
   const [scale, setScale] = useState(1);
 
@@ -33,8 +32,9 @@ function App() {
   }, [operator, trPath]);
 
   useEffect(() => {
-    const numbers = trPath.match(/^\d+|\d+\b|\d+(?=\w)/g)?.map((v) => +v) ?? [];
-    const nums = trPath.match(/[M,L]\s+-?\d+\s+-?\d+\s+-?\d+/g);
+    const nums = trPath.match(
+      /[M,L]\s+[+-]?(\d*\.\d+|\d+\.\d*|\d+)\s+[+-]?(\d*\.\d+|\d+\.\d*|\d+)\s+[+-]?(\d*\.\d+|\d+\.\d*|\d+)/g
+    );
     const p: PathD[] = [];
 
     nums?.map((v) => {
@@ -45,17 +45,11 @@ function App() {
       };
       p.push(item);
     });
-    setNewPoints(p);
 
-    setPoints(parseMatrix(numbers, matSize));
+    setNewPoints(p);
   }, [matSize, trPath]);
 
   useEffect(() => {
-    const multiplied = multiplyMatrices(points || [[1]], operator || [[1]]);
-    setDebug(multiplied);
-
-    console.log("logging");
-
     if (newPoints) {
       const result = [];
       for (let i = 0; i < newPoints.length; i++) {
@@ -67,30 +61,27 @@ function App() {
         const newVector = transposeMatrix(
           multiplyMatrices(operator || [[1]], vector || [[1]]) || [[1]]
         );
-        const test: PathD = {
+        const pathCommand: PathD = {
           act: el.act,
           coords:
             newVector && newVector[0]
               ? (newVector[0] as [number, number, number])
               : [0, 0, 0],
         };
-        result.push(test);
-        // console.log(operator, sc, test);
+        result.push(pathCommand);
       }
       setNewRes(result);
     }
-  }, [points, operator, scale, newPoints]);
+  }, [operator, scale, newPoints]);
 
   useEffect(() => {
     let str = "";
     newRes?.map(({ act, coords }) => {
-      console.log(act, coords);
-
       str += `${act} ${coords[0] * scale} ${coords[1] * scale} `;
     });
 
     setNewPath(str);
-  }, [newRes]);
+  }, [newRes, scale]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function handleOperator(e: any) {
@@ -139,7 +130,6 @@ function App() {
           </button>
         </div>
         <textarea
-          // type="string"
           name="operator"
           id="operator_input"
           value={trPath}
@@ -147,31 +137,17 @@ function App() {
         />
       </section>
       <div className="w-1/2 h-1/2 p-1 border-gray-500 border-2 rounded-md m-4">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="w-full h-full transition"
-        >
+        <svg xmlns="http://www.w3.org/2000/svg" className="w-full h-full ">
           <path
             d={newPath}
             stroke="rgb(23, 200, 64)" // rgb(23, 200, 64)
-            strokeWidth={2}
-            scale={10}
+            strokeWidth={1}
+            // scale={10}
             style={{ transform: `translate(50%, 50%)` }}
-          />
+          ></path>
         </svg>
       </div>
-      <label htmlFor="mat_size">Size</label>
-      {/* <input
-        type="number"
-        name="mat_size"
-        id="mat_size"
-        min={3}
-        max={4}
-        inputMode="numeric"
-        value={matSize}
-        onChange={(e) => setMatsize(+e.target.value)}
-        className="m-2 text-center "
-      /> */}
+      <UploadFile setTrPath={setTrPath} />
       <section className="flex flex-row">
         <section>
           <h2>Operator</h2>
@@ -185,6 +161,7 @@ function App() {
                       <input
                         key={`${index}_${colIndex}`}
                         type="number"
+                        step={0.5}
                         defaultValue={index === colIndex ? 1 : 0}
                         name={`${index}_${colIndex}`}
                         id=""
@@ -203,7 +180,7 @@ function App() {
             name="scale"
             id="scale"
             min={0}
-            // step={0.1}
+            step={0.5}
             security="number"
             value={scale}
             onChange={(e) => setScale(+e.target.value)}
