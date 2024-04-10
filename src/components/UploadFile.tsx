@@ -22,7 +22,6 @@ function UploadFile() {
         }
         str += `L ${firstVert[0]} ${firstVert[1]} ${firstVert[2]} `;
       });
-
       console.log(str);
 
       setTrPath(str);
