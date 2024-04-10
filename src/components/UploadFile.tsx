@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { useBearStore } from "../store";
 
-function UploadFile({ setTrPath }: { setTrPath: (value: string) => void }) {
+function UploadFile() {
   const [vertexes, setVertexes] = useState<number[][]>([]);
   const [polygons, setPolygons] = useState<number[][]>([]);
+  const setTrPath = useBearStore((state) => state.enterPath);
 
   useEffect(() => {
     if (vertexes && polygons) {
