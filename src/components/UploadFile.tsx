@@ -51,7 +51,7 @@ function UploadFile() {
           vertexes.push(coords);
         }
 
-        const polygonLine = v.match(/f(\s\d+\/\d+\/\d+)+\s*/g);
+        const polygonLine = v.match(/f((\s\d*\/?\d*\/?\d*)+)\s*/g);
         if (polygonLine) {
           const [_, ...poly] = polygonLine[0]
             .split(/\s+/)
